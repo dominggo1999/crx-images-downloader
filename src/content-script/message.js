@@ -3,6 +3,60 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { messageToBackground } from './util';
 
+const uniqueInArray = (items) => {
+  const seen = {};
+
+  return items.filter((item) => {
+    // eslint-disable-next-line no-prototype-builtins
+    if (seen.hasOwnProperty(item)) {
+      return false;
+    }
+    seen[item] = true;
+    return true;
+  });
+};
+
+const searchImagesInDOM = async (document) => {
+  const srcChecker = /url\(\s*?['"]?\s*?(\S+?)\s*?["']?\s*?\)/i;
+  const images = await Array.from(document.querySelectorAll('*')).reduce((collection, node) => {
+    // From background image
+    // bg src
+    const prop = window.getComputedStyle(node, null)
+      .getPropertyValue('background-image');
+
+    const match = srcChecker.exec(prop);
+    if (match) {
+      collection.push(match[1]);
+    }
+
+    // From image tag
+    if (node.tagName === 'IMG') {
+      // src from img tag
+      if (node.src) {
+        collection.push(node.src);
+      }
+    } else if (node.tagName === 'IFRAME') {
+      // iframe
+      try {
+        searchImagesInDOM(node.contentDocument || node.contentWindow.document)
+          .then((images) => {
+            if (images?.length > 0) {
+              images.forEach((img) => {
+                if (img) { collection.push(img); }
+              });
+            }
+          });
+      } catch (e) {
+        console.log(e);
+      }
+    }
+
+    return collection;
+  }, []);
+
+  return uniqueInArray(images);
+};
+
 const store = create(() => ({
   images: [],
 }));
@@ -12,12 +66,12 @@ chrome?.runtime?.onMessage.addListener(async (req, sender, sendRes) => {
 
   if (action === 'get-images') {
     // If images exist
-    const imagesElements = document.images;
+    const imageUrls = await searchImagesInDOM(document);
 
-    if (imagesElements.length) {
+    if (imageUrls.length) {
       const infoFromBackground = await messageToBackground({
         action: 'get-images-info',
-        urls: Array.from(imagesElements).filter((image) => image.src).map((image) => image.src),
+        urls: imageUrls,
       });
 
       console.log(infoFromBackground);
@@ -41,11 +95,8 @@ chrome?.runtime?.onMessage.addListener(async (req, sender, sendRes) => {
 
     const zip = new JSZip();
 
-    images.forEach(({ url, base64, type }) => {
-      const filename = url.substring(url.lastIndexOf('/') + 1).replace(/\.[^/.]+$/, '');
-      const extension = `.${type.split('/')[1]}`;
-
-      zip.file(filename + extension, base64.replace(/^data:image\/(png|jpg|jpeg|gif);base64,/, ''), { base64: true });
+    images.forEach(({ fileName, base64 }) => {
+      zip.file(fileName, base64.split(',')[1], { base64: true });
     });
 
     zip.generateAsync({ type: 'blob' }).then((content) => {
