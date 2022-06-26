@@ -46,7 +46,7 @@ chrome?.runtime?.onMessage.addListener((req, sender, sendRes) => {
         }),
       );
 
-      const validExtensions = ['png', 'jpeg', 'jpg', 'webp', 'bmp'];
+      const validExtensions = ['png', 'jpeg', 'jpg', 'webp', 'bmp', 'gif'];
 
       sendRes({
         images: images.filter((i) => {
