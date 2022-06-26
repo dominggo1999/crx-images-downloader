@@ -46,9 +46,11 @@ chrome?.runtime?.onMessage.addListener((req, sender, sendRes) => {
         }),
       );
 
+      const validExtensions = ['png', 'jpeg', 'jpg', 'webp', 'bmp'];
+
       sendRes({
         images: images.filter((i) => {
-          return i.extension !== 'svg';
+          return validExtensions.includes(i.extension);
         }),
       });
     })();
