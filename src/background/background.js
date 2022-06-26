@@ -1,4 +1,5 @@
 import mime from 'mime-types';
+import short from 'short-uuid';
 
 const blobToBase64 = (blob) => {
   return new Promise((resolve, _) => {
@@ -15,13 +16,18 @@ const getFileName = (url, base64, id, extension) => {
     return `base_64_${id}.${extension}`;
   }
 
-  const filename = url
-    .substring(url.lastIndexOf('/') + 1) // strip protocol
-    .replace(/\.[^/.]+$/, '') // strip extension
-    .replace(/[/\\?%*:|"<>]/g, '-') // strip illegal chars;
-    .slice(0, 100); // limit chars
+  const extRegexp = /\.[^/.]+$/;
+  const extensionInUrl = extRegexp.test(url);
 
-  return `${filename}.${extension}`;
+  let filename = url
+    .substring(url.lastIndexOf('/') + 1) // strip protocol
+    .replace(/[/\\?%*:|"<>]/g, '-'); // strip illegal chars;
+
+  // strip extension if exist
+  filename = extensionInUrl ? filename.replace(extRegexp, '') : filename;
+
+  // UUID forcing unique file name
+  return `${filename + short.generate()}.${extension}`;
 };
 
 chrome?.runtime?.onMessage.addListener((req, sender, sendRes) => {
