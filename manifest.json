@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Image Downloader",
+  "version": "1.0.0",
+  "action": {
+    "default_popup": "src/popup/index.html"
+  },
+  "options_page": "src/options/index.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "src/content-script/message.js"
+      ],
+      "all_frames": false,
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "src/background/background.js",
+    "type": "module"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/content-script/message.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "permissions": [
+    "webRequest"
+  ],
+  "host_permissions": [
+    "*://*/*"
+  ]
+}
